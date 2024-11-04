@@ -10,7 +10,7 @@ COPY . .
 
 ENV DJANGO_SETTINGS_MODULE=WoutaBack.settings
 
-RUN python manage.py collecstatic --noinput
+RUN python manage.py collectstatic --noinput
 
 RUN python manage.py migrate --noinput
 
