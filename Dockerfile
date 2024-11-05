@@ -12,6 +12,9 @@ ENV DJANGO_SETTINGS_MODULE=WoutaBack.settings
 
 RUN python manage.py collectstatic --noinput
 
+ARG DB_URL
+ENV DB_URL=${DB_URL} 
+
 RUN python manage.py migrate --noinput
 
 EXPOSE 8000
