@@ -53,6 +53,7 @@ INSTALLED_APPS = [
 
     # abaixo desta linha sera colocado os apps criados para o back
     'login',
+    'Projetos',
 ]
 
 MIDDLEWARE = [
