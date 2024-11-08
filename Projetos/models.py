@@ -7,10 +7,10 @@ class Projetos(models.Model):
     description = models.TextField(max_length=500)
     created = models.DateTimeField(auto_now_add=True)
     prazo = models.DateField(null=True, blank=True)
+
+    #tupla de opções pro campo status 
     STATUS_CHOICES = [
-        ('andamento', ('Em andamento')),
-        ('cancelado', ('Cancelado')),
-        ('concluido', ('Concluído')),
+        ('andamento', 'cancelado', 'concluido')
     ]
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='andamento')
 
