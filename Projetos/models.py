@@ -10,7 +10,9 @@ class Projetos(models.Model):
 
     #tupla de opções pro campo status 
     STATUS_CHOICES = [
-        ('andamento', 'cancelado', 'concluido')
+        ('andamento', ('Em andamento')),
+        ('cancelado', ('Cancelado')),
+        ('concluido', ('Concluído')),
     ]
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='andamento')
 
