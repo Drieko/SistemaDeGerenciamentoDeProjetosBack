@@ -35,6 +35,7 @@ ALLOWED_HOSTS = ['*']
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173"
+    
 
 ]
 
@@ -93,7 +94,8 @@ WSGI_APPLICATION = 'WoutaBack.wsgi.application'
 
 DATABASES = {
     'default':dj_database_url.config(
-    default=DB_URL)
+    default=os.environ.get(DB_URL, 'sqlite:///db.sqlite3')
+    )
 }
 
 
