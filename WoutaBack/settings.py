@@ -16,8 +16,9 @@ from decouple import config
 import dj_database_url
 import os 
 
-DB_URL = config('DB_URL', default=os.environ.get('DB_URL'))
+DB_URL = config('DB_URL', default='sqlite:///db.sqlite3')
 print(DB_URL)
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
