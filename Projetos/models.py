@@ -1,4 +1,5 @@
 from django.db import models
+from login.models import User
 import uuid
 
 class Projetos(models.Model):
@@ -35,4 +36,7 @@ class Tarefas(models.Model):
     ('alta', ('Alta')),
     ]
     prioridade = models.CharField(max_length=10, choices=PRIORIDADE_CHOICES, default='media')
+
+class colaboradores(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     
