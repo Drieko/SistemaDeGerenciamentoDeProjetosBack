@@ -5,3 +5,6 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'nome', 'email', 'senha']
+        extra_kwargs = {
+            'senha': {'write_only': True},  # A senha não será retornada nos resultados
+        }
