@@ -13,11 +13,13 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from decouple import config
+from datetime import timedelta
 import dj_database_url
 import os 
 
-DB_URL = config('DB_URL', default=os.environ.get('DB_URL', None))
+DB_URL = config('DB_URL', default='sqlite:///db.sqlite3')
 print(DB_URL)
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -34,7 +36,9 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "https://sistemadegerenciamentodeprojetosfront.onrender.com",
+    
 
 ]
 
@@ -48,11 +52,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
     'drf_yasg',
 
     # abaixo desta linha sera colocado os apps criados para o back
     'login',
+    'Projetos',
 ]
 
 MIDDLEWARE = [
@@ -92,7 +98,8 @@ WSGI_APPLICATION = 'WoutaBack.wsgi.application'
 
 DATABASES = {
     'default':dj_database_url.config(
-    default=DB_URL)
+    default=os.environ.get(DB_URL, 'sqlite:///db.sqlite3')
+    )
 }
 
 
@@ -147,6 +154,29 @@ SWAGGER_SETTINGS = {
                 'name': 'Authorization',
                 'in': 'header'
             }
-        }
+
+        },
+        'SECURITY_REQUIREMENTS': [
+            {
+            'Bearer' : []
+            }
+        ],
+        'USE_SESSION_AUTH': False,
     }
+}
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
 }
