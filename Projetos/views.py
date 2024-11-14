@@ -1,58 +1,75 @@
-from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.views import APIView
-# envolvendo projetos
-from .models import Projetos
-from .serializers import ProjetoSerializer
-
-#envolvendo tarefas
-from .models import Tarefas
-from .serializers import TarefaSerializer
-
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from .models import Projetos, Tarefas
+from .serializers import ProjetoSerializer, TarefaSerializer
 from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 
-#projetos
 class ProjetoView(APIView):
+    permission_classes = [permissions.IsAuthenticated]  # Garante que o usuário está autenticado
+
     @swagger_auto_schema(responses={200: 'Lista de projetos'})
     def get(self, request):
-        projetos = Projetos.objects.all()
+        """
+        Listar projetos do usuário autenticado com filtro por status.
+        """
+        status_filter = request.query_params.get('status', None)
+        projetos = Projetos.objects.filter(usuarios=request.user)  # Filtra projetos associados ao usuário
+
+        if status_filter:
+            projetos = projetos.filter(status=status_filter)
+
         serializer = ProjetoSerializer(projetos, many=True)
         return Response(serializer.data)
 
     @swagger_auto_schema(request_body=ProjetoSerializer, responses={201: 'Projeto criado'})
     def post(self, request):
+        """
+        Criar um novo projeto e associar ao usuário autenticado.
+        """
+        # Associar automaticamente o usuário autenticado ao projeto
         serializer = ProjetoSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(usuarios=[request.user])  # Adiciona o usuário autenticado
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-#VER DEPOIS DELETE DEU RUIM !!!!!!!!!!!!!!!!!!!!!
-    # @swagger_auto_schema(request_body=openapi.Schema(
-    #         type=openapi.TYPE_OBJECT,
-    #         properties={
-    #             'id': openapi.Schema(type=openapi.TYPE_STRING,   format=openapi.FORMAT_UUID,  description='ID do projeto a ser deletado')
-    #         },
-    #         required=['id']
-    #     ),
-    #     responses={204: 'Projeto deletado'}
-    # )
-    # def delete(self, request):
-    #     serializer = ProjetoSerializer(data=request.data.get('id'))
-    #     if serializer.is_valid():
-    #         try:
-    #             projeto = Projetos.objects.get(id=projeto_id)
-    #             projeto.delete()
-    #             return Response({"message": "Projeto deletado com sucesso."}, status=status.    HTTP_204_NO_CONTENT)
-    #         except Projetos.DoesNotExist:
-    #             return Response({"error": "Projeto não encontrado."}, status=status.HTTP_404_NOT_FOUND)
-    #             projeto_id = serializer.validated_data['id']
-    #             projeto = get_object_or_404(Projetos, id=projeto_id)
-    #             projeto.delete()
-    #             return Response(status=status.HTTP_204_NO_CONTENT)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    @swagger_auto_schema(request_body=ProjetoSerializer, responses={200: 'Projeto atualizado'})
+    def put(self, request, pk=None):
+        """
+        Atualizar um projeto.
+        """
+        # Verifica se o projeto existe e se o usuário é o dono ou um membro do projeto
+        try:
+            projeto = Projetos.objects.get(pk=pk)
+            # Verifica se o usuário é o dono ou um membro do projeto
+            if request.user not in projeto.usuarios.all():
+                return Response({"detail": "Você não tem permissão para editar este projeto."},
+                                status=status.HTTP_403_FORBIDDEN)
+        except Projetos.DoesNotExist:
+            return Response({"detail": "Projeto não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Atualiza o projeto
+        serializer = ProjetoSerializer(projeto, data=request.data, partial=False)  # False se quiser que todos os campos sejam atualizados
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @swagger_auto_schema(responses={204: 'Projeto excluído'})
+    def delete(self, request, pk=None):
+        """
+        Excluir um projeto do usuário autenticado.
+        """
+        try:
+            projeto = Projetos.objects.get(pk=pk, usuarios=request.user)
+        except Projetos.DoesNotExist:
+            return Response({"detail": "Projeto não encontrado ou você não tem permissão para excluir."},
+                            status=status.HTTP_404_NOT_FOUND)
+        
+        projeto.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 #tarefas 
 class TarefaView(APIView):

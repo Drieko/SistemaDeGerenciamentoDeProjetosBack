@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 @swagger_auto_schema(
     methods=['POST'],
     request_body=UserSerializer,
-    tags=['login'],
+    tags=['registro'],
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])

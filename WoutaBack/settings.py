@@ -98,7 +98,7 @@ WSGI_APPLICATION = 'WoutaBack.wsgi.application'
 
 DATABASES = {
     'default':dj_database_url.config(
-    default=os.environ.get(DB_URL, 'sqlite:///db.sqlite3')
+    default= DB_URL
     )
 }
 
@@ -147,7 +147,6 @@ STATIC_ROOT = os.path.join(BASE_DIR,'staticfiles')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 SWAGGER_SETTINGS = {
-    'DEFAULTS': {
         'SECURITY_DEFINITIONS': {
             'Bearer': {
                 'type': 'apiKey',
@@ -163,7 +162,7 @@ SWAGGER_SETTINGS = {
         ],
         'USE_SESSION_AUTH': False,
     }
-}
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -175,7 +174,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,

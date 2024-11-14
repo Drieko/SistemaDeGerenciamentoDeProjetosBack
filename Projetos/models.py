@@ -3,18 +3,20 @@ from django.contrib.auth.models import User
 import uuid
 
 class Projetos(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    titulo = models.CharField(max_length=255)
-    description = models.TextField(max_length=500)
-    created = models.DateTimeField(auto_now_add=True)
-    prazo = models.DateField(null=True, blank=True)
-
     #tupla de opções pro campo status 
     STATUS_CHOICES = [
         ('andamento', ('Em andamento')),
         ('cancelado', ('Cancelado')),
         ('concluido', ('Concluído')),
     ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    titulo = models.CharField(max_length=255)
+    description = models.TextField(max_length=500)
+    created = models.DateTimeField(auto_now_add=True)
+    prazo = models.DateField(null=True, blank=True)
+    usuarios = models.ManyToManyField(User, related_name='projetos', blank=True)
+    
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='andamento')
 
     def __str__(self):
@@ -37,6 +39,4 @@ class Tarefas(models.Model):
     ]
     prioridade = models.CharField(max_length=10, choices=PRIORIDADE_CHOICES, default='media')
 
-class colaboradores(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     
