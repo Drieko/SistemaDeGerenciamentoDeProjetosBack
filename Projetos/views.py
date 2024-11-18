@@ -5,6 +5,7 @@ from .models import Projetos, Tarefas
 from .serializers import ProjetoSerializer, TarefaSerializer
 from drf_yasg.utils import swagger_auto_schema
 
+
 class ProjetoView(APIView):
     permission_classes = [permissions.IsAuthenticated]  # Garante que o usuário está autenticado
 
@@ -33,41 +34,42 @@ class ProjetoView(APIView):
             serializer.save(usuarios=[request.user])  # Adiciona o usuário autenticado
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class ProjetoIdView(APIView):
+    @swagger_auto_schema(responses={200: ProjetoSerializer})
+    def get(self, request, pk=None):
+        try:
+            projeto = Projetos.objects.get(pk=pk, usuarios=request.user)  # Filtra pelo usuário autenticado
+        except Projetos.DoesNotExist:
+            return Response({"detail": "Projeto não encontrado ou você não tem permissão para visualizá-lo."},
+                            status=status.HTTP_404_NOT_FOUND)
 
+        serializer = ProjetoSerializer(projeto)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @swagger_auto_schema(request_body=ProjetoSerializer, responses={200: 'Projeto atualizado'})
+    @swagger_auto_schema(request_body=ProjetoSerializer, responses={200: ProjetoSerializer})
     def put(self, request, pk=None):
         """
-        Atualizar um projeto.
+        Atualiza um projeto existente.
         """
-        # Verifica se o projeto existe e se o usuário é o dono ou um membro do projeto
         try:
-            projeto = Projetos.objects.get(pk=pk)
-            # Verifica se o usuário é o dono ou um membro do projeto
-            if request.user not in projeto.usuarios.all():
-                return Response({"detail": "Você não tem permissão para editar este projeto."},
-                                status=status.HTTP_403_FORBIDDEN)
+            projeto = Projetos.objects.get(pk=pk, usuarios=request.user)  # Filtra pelo usuário autenticado
         except Projetos.DoesNotExist:
-            return Response({"detail": "Projeto não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Projeto não encontrado ou você não tem permissão para editá-lo."},
+                            status=status.HTTP_404_NOT_FOUND)
 
-        # Atualiza o projeto
-        serializer = ProjetoSerializer(projeto, data=request.data, partial=False)  # False se quiser que todos os campos sejam atualizados
+        serializer = ProjetoSerializer(projeto, data=request.data, partial=False)  # False se for obrigatório atualizar todos os campos
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
     @swagger_auto_schema(responses={204: 'Projeto excluído'})
     def delete(self, request, pk=None):
-        """
-        Excluir um projeto do usuário autenticado.
-        """
         try:
-            projeto = Projetos.objects.get(pk=pk, usuarios=request.user)
+            projeto = Projetos.objects.get(pk=pk, usuarios=request.user)  # Filtra pelo usuário autenticado
         except Projetos.DoesNotExist:
-            return Response({"detail": "Projeto não encontrado ou você não tem permissão para excluir."},
+            return Response({"detail": "Projeto não encontrado ou você não tem permissão para excluí-lo."},
                             status=status.HTTP_404_NOT_FOUND)
-        
         projeto.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
