@@ -1,8 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from .models import Projetos, Tarefas
-from .serializers import ProjetoSerializer, TarefaSerializer
+from .models import Projetos, Tarefas, Comentario
+from .serializers import ProjetoSerializer, TarefaSerializer, ComentarioSerializer
 from drf_yasg.utils import swagger_auto_schema
 
 
@@ -31,7 +31,7 @@ class ProjetoView(APIView):
         # Associar automaticamente o usuário autenticado ao projeto
         serializer = ProjetoSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(usuarios=[request.user])  # Adiciona o usuário autenticado
+            serializer.save()  # Adiciona o usuário autenticado
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -63,6 +63,7 @@ class ProjetoIdView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
     @swagger_auto_schema(responses={204: 'Projeto excluído'})
     def delete(self, request, pk=None):
         try:
@@ -88,6 +89,96 @@ class TarefaView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class TarefaIdView(APIView):
+    @swagger_auto_schema(responses={200: TarefaSerializer})
+    def get(self, request, pk=None):
+        try:
+            tarefa = Tarefas.objects.get(id=pk,  projeto__usuarios=request.user)  # Filtra pelo usuário autenticado
+        except Tarefas.DoesNotExist:
+            return Response({"detail": "Projeto não encontrado ou você não tem permissão para visualizá-lo."},
+                            status=status.HTTP_404_NOT_FOUND)
 
+        serializer = TarefaSerializer(tarefa)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(request_body=TarefaSerializer, responses={200: TarefaSerializer})
+    def put(self, request, pk=None):
+        """
+        Atualiza um Tarefa existente.
+        """
+        try:
+            tarefa = Tarefas.objects.get(id=pk, projeto__usuarios=request.user)  # Filtra pelo usuário autenticado
+        except Tarefas.DoesNotExist:
+            return Response({"detail": "tarefa não encontrado ou você não tem permissão para editá-lo."},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        serializer = TarefaSerializer(tarefa, data=request.data, partial=False)  # False se for obrigatório atualizar todos os campos
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(responses={204: 'tarefa excluído'})
+    def delete(self, request, pk=None):
+        try:
+            tarefa = Tarefas.objects.get(id=pk, projeto__usuarios=request.user)  # Filtra pelo usuário autenticado
+        except Tarefas.DoesNotExist:
+            return Response({"detail": "tarefa não encontrado ou você não tem permissão para excluí-lo."},
+                            status=status.HTTP_404_NOT_FOUND)
+        tarefa.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class ComentarioView(APIView):
+    def post(self, request, pk=None, tipo='tarefa'):
+        """
+        Cria um comentário para uma tarefa ou projeto.
+        """
+        autor = request.user
+        texto = request.data.get('texto')
+        
+        if tipo == 'tarefa':
+            tarefa = Tarefas.objects.get(pk=pk)
+            comentario = Comentario(autor=autor, texto=texto, tarefa=tarefa)
+        elif tipo == 'projeto':
+            projeto = Projetos.objects.get(pk=pk)
+            comentario = Comentario(autor=autor, texto=texto, projeto=projeto)
+        else:
+            return Response({"detail": "Tipo inválido, use 'tarefa' ou 'projeto'."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        comentario.save()
+        return Response(ComentarioSerializer(comentario).data, status=status.HTTP_201_CREATED)
+
+    def get(self, request, pk=None, tipo='tarefa'):
+        """
+        Retorna os comentários de uma tarefa ou projeto.
+        """
+        if tipo == 'tarefa':
+            tarefa = Tarefas.objects.get(pk=pk)
+            comentarios = Comentario.objects.filter(tarefa=tarefa)
+        elif tipo == 'projeto':
+            projeto = Projetos.objects.get(pk=pk)
+            comentarios = Comentario.objects.filter(projeto=projeto)
+        else:
+            return Response({"detail": "Tipo inválido, use 'tarefa' ou 'projeto'."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = ComentarioSerializer(comentarios, many=True)
+        return Response(serializer.data)
+
+class ComentarioIdView(APIView):
+    def delete(self, request, pk=None):
+        """
+        Exclui um comentário específico.
+        """
+        try:
+            comentario = Comentario.objects.get(pk=pk, autor=request.user)
+        except Comentario.DoesNotExist:
+            return Response({"detail": "Comentário não encontrado ou você não tem permissão para excluí-lo."},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        comentario.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     
