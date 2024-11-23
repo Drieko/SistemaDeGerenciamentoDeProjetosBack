@@ -23,3 +23,7 @@ class TarefaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tarefas
         fields = '__all__'
+        extra_kwargs = {
+            'tarefa': {'required': False, 'allow_null': True},
+            'projeto': {'required': False, 'allow_null': True}
+        }

@@ -130,42 +130,65 @@ class TarefaIdView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class ComentarioView(APIView):
-    def post(self, request, pk=None, tipo='tarefa'):
-        """
-        Cria um comentário para uma tarefa ou projeto.
-        """
-        autor = request.user
-        texto = request.data.get('texto')
-        
-        if tipo == 'tarefa':
-            tarefa = Tarefas.objects.get(pk=pk)
-            comentario = Comentario(autor=autor, texto=texto, tarefa=tarefa)
-        elif tipo == 'projeto':
-            projeto = Projetos.objects.get(pk=pk)
-            comentario = Comentario(autor=autor, texto=texto, projeto=projeto)
-        else:
-            return Response({"detail": "Tipo inválido, use 'tarefa' ou 'projeto'."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        
-        comentario.save()
-        return Response(ComentarioSerializer(comentario).data, status=status.HTTP_201_CREATED)
-
+    class Meta:
+        extra_kwargs = {'tarefa': {'required': False}, 'projeto': {'required': False}}
+    @swagger_auto_schema(
+        operation_summary='Retorna os comentários de uma tarefa ou projeto.',
+        responses={
+            200: ComentarioSerializer(many=True),
+            400: 'Tipo inválido, use "tarefa" ou "projeto".',
+            404: 'Tarefa ou projeto não encontrado.'
+        }
+    )
     def get(self, request, pk=None, tipo='tarefa'):
-        """
-        Retorna os comentários de uma tarefa ou projeto.
-        """
         if tipo == 'tarefa':
-            tarefa = Tarefas.objects.get(pk=pk)
-            comentarios = Comentario.objects.filter(tarefa=tarefa)
+            try:
+                tarefa = Tarefas.objects.get(pk=pk)
+                comentarios = Comentario.objects.filter(tarefa=tarefa)
+            except Tarefas.DoesNotExist:
+                return Response({"detail": "Tarefa não encontrada"}, status=status.HTTP_404_NOT_FOUND)
         elif tipo == 'projeto':
-            projeto = Projetos.objects.get(pk=pk)
-            comentarios = Comentario.objects.filter(projeto=projeto)
+            try:
+                projeto = Projetos.objects.get(pk=pk)
+                comentarios = Comentario.objects.filter(projeto=projeto)
+            except Projetos.DoesNotExist:
+                return Response({"detail": "Projeto não encontrado"}, status=status.HTTP_404_NOT_FOUND)
         else:
             return Response({"detail": "Tipo inválido, use 'tarefa' ou 'projeto'."},
                             status=status.HTTP_400_BAD_REQUEST)
         
         serializer = ComentarioSerializer(comentarios, many=True)
         return Response(serializer.data)
+
+    @swagger_auto_schema(
+        operation_summary='Cria um novo comentário.',
+        request_body=ComentarioSerializer,
+        responses={
+            201: ComentarioSerializer,
+            400: 'Dados inválidos.',
+            404: 'Tarefa ou projeto não encontrado.'
+        }
+    )
+    def post(self, request, pk=None, tipo='tarefa'):
+        if tipo == 'tarefa':
+            try:
+                tarefa = Tarefas.objects.get(pk=pk)
+            except Tarefas.DoesNotExist:
+                return Response({"detail": "Tarefa não encontrada"}, status=status.HTTP_404_NOT_FOUND)
+        elif tipo == 'projeto':
+            try:
+                projeto = Projetos.objects.get(pk=pk)
+            except Projetos.DoesNotExist:
+                return Response({"detail": "Projeto não encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({"detail": "Tipo inválido, use 'tarefa' ou 'projeto'."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = ComentarioSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(tarefa=tarefa) if tipo == 'tarefa' else serializer.save(projeto=projeto)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ComentarioIdView(APIView):
     def delete(self, request, pk=None):
