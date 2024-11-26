@@ -1,9 +1,10 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from .models import Projetos, Tarefas, Comentario
-from .serializers import ProjetoSerializer, TarefaSerializer, ComentarioSerializer
+from .models import Projetos, Tarefas, ComentarioProjeto, ComentarioTarefa
+from .serializers import ProjetoSerializer, TarefaSerializer, ComentarioProjetoSerializer, ComentarioTarefaSerializer
 from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 
 class ProjetoView(APIView):
@@ -74,6 +75,42 @@ class ProjetoIdView(APIView):
         projeto.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+class ProjetoStatusView(APIView):
+    STATUS_CHOICES = [
+    ('andamento', ('Em andamento')),
+    ('cancelado', ('Cancelado')),
+    ('concluido', ('Concluído')),
+    ]
+
+    @swagger_auto_schema(
+    operation_summary='Retorna os projetos com base no status.',
+    manual_parameters=[
+        openapi.Parameter(
+            name='status',
+            in_=openapi.IN_QUERY,
+            description='Status dos projetos.',
+            type=openapi.TYPE_STRING,
+            enum=[status[0] for status in STATUS_CHOICES]
+        )
+    ],
+    responses={
+        200: ProjetoSerializer(many=True),
+        400: 'Status inválido.',
+        404: 'Nenhum projeto encontrado com o status especificado.'
+    })
+    def get(self, request, pk=None):
+        """
+        Retorna os projetos com base no status.
+        """
+        status = request.query_params.get('status')
+
+        if status:
+            projetos = Projetos.objects.filter(status=status)
+        else:
+            projetos = Projetos.objects.all()
+
+        serializer = ProjetoSerializer(projetos, many=True)
+        return Response(serializer.data)
 #tarefas 
 class TarefaView(APIView):
     @swagger_auto_schema(responses={200: 'Lista de tarefas'})
@@ -129,79 +166,136 @@ class TarefaIdView(APIView):
         tarefa.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class ComentarioView(APIView):
-    class Meta:
-        extra_kwargs = {'tarefa': {'required': False}, 'projeto': {'required': False}}
+class ComentarioProjetoView(APIView):
     @swagger_auto_schema(
-        operation_summary='Retorna os comentários de uma tarefa ou projeto.',
+        operation_summary='Retorna os comentários de um projeto.',
         responses={
-            200: ComentarioSerializer(many=True),
-            400: 'Tipo inválido, use "tarefa" ou "projeto".',
-            404: 'Tarefa ou projeto não encontrado.'
+            200: ComentarioProjetoSerializer(many=True),
+            400: 'Tipo inválido, use "projeto".',
+            404: 'Projeto não encontrado.'
         }
     )
-    def get(self, request, pk=None, tipo='tarefa'):
-        if tipo == 'tarefa':
-            try:
-                tarefa = Tarefas.objects.get(pk=pk)
-                comentarios = Comentario.objects.filter(tarefa=tarefa)
-            except Tarefas.DoesNotExist:
-                return Response({"detail": "Tarefa não encontrada"}, status=status.HTTP_404_NOT_FOUND)
-        elif tipo == 'projeto':
-            try:
-                projeto = Projetos.objects.get(pk=pk)
-                comentarios = Comentario.objects.filter(projeto=projeto)
-            except Projetos.DoesNotExist:
-                return Response({"detail": "Projeto não encontrado"}, status=status.HTTP_404_NOT_FOUND)
-        else:
-            return Response({"detail": "Tipo inválido, use 'tarefa' ou 'projeto'."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        
-        serializer = ComentarioSerializer(comentarios, many=True)
+    def get(self, request, pk):
+        """
+        Retorna todos os comentários de um projeto específico.
+        """
+        try:
+            projeto = Projetos.objects.get(id=pk)
+            comentarios = ComentarioProjeto.objects.filter(projeto=projeto)
+        except Projetos.DoesNotExist:
+            return Response({"detail": "Projeto não encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ComentarioProjetoSerializer(comentarios, many=True)
         return Response(serializer.data)
 
     @swagger_auto_schema(
-        operation_summary='Cria um novo comentário.',
-        request_body=ComentarioSerializer,
+        operation_summary='Cria um novo comentário para um projeto.',
+        request_body=ComentarioProjetoSerializer,
         responses={
-            201: ComentarioSerializer,
+            201: ComentarioProjetoSerializer,
             400: 'Dados inválidos.',
-            404: 'Tarefa ou projeto não encontrado.'
+            404: 'Projeto não encontrado.'
         }
     )
-    def post(self, request, pk=None, tipo='tarefa'):
-        if tipo == 'tarefa':
-            try:
-                tarefa = Tarefas.objects.get(pk=pk)
-            except Tarefas.DoesNotExist:
-                return Response({"detail": "Tarefa não encontrada"}, status=status.HTTP_404_NOT_FOUND)
-        elif tipo == 'projeto':
-            try:
-                projeto = Projetos.objects.get(pk=pk)
-            except Projetos.DoesNotExist:
-                return Response({"detail": "Projeto não encontrado"}, status=status.HTTP_404_NOT_FOUND)
-        else:
-            return Response({"detail": "Tipo inválido, use 'tarefa' ou 'projeto'."},
-                            status=status.HTTP_400_BAD_REQUEST)
+    def post(self, request, pk=None):
+        """
+        Cria um novo comentário associado a um projeto específico.
+            """
+        try:
+            projeto = Projetos.objects.get(id=request.data['projeto'])
+            
+        except Projetos.DoesNotExist:
+            return Response({"detail": "Projeto não encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = ComentarioSerializer(data=request.data)
+        if not projeto:
+            return Response({"detail": "Projeto não encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Associando o projeto ao comentário
+        # request.data['projeto'] = projeto.id  # Garantir que o comentário será associado ao projeto correto
+
+        serializer = ComentarioProjetoSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(tarefa=tarefa) if tipo == 'tarefa' else serializer.save(projeto=projeto)
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class ComentarioIdView(APIView):
+class ComentarioProjetoIdView(APIView):
     def delete(self, request, pk=None):
         """
         Exclui um comentário específico.
         """
         try:
-            comentario = Comentario.objects.get(pk=pk, autor=request.user)
-        except Comentario.DoesNotExist:
+            comentario = ComentarioProjeto.objects.get(pk=pk, autor=request.user)  # Verifique se o usuário é o autor do comentário
+        except ComentarioProjeto.DoesNotExist:
             return Response({"detail": "Comentário não encontrado ou você não tem permissão para excluí-lo."},
                             status=status.HTTP_404_NOT_FOUND)
 
         comentario.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
     
+class ComentarioTarefaView(APIView):
+    @swagger_auto_schema(
+        operation_summary='Retorna os comentários de uma tarefa.',
+        responses={
+            200: ComentarioTarefaSerializer(many=True),
+            400: 'Tipo inválido, use "tarefa".',
+            404: 'Tarefa não encontrada.'
+        }
+    )
+    def get(self, request, pk):
+        """
+        Retorna todos os comentários de uma tarefa específica.
+        """
+        try:
+            tarefa = Tarefas.objects.get(id=pk)
+            comentarios = ComentarioTarefa.objects.filter(tarefa=tarefa)
+        except Tarefas.DoesNotExist:
+            return Response({"detail": "Tarefa não encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ComentarioTarefaSerializer(comentarios, many=True)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(
+        operation_summary='Cria um novo comentário para uma tarefa.',
+        request_body=ComentarioTarefaSerializer,
+        responses={
+            201: ComentarioTarefaSerializer,
+            400: 'Dados inválidos.',
+            404: 'Tarefa não encontrada.'
+        }
+    )
+    def post(self, request, pk=None):
+        """
+        Cria um novo comentário associado a uma tarefa específica.
+        """
+        try:
+            tarefa = Tarefas.objects.get(id=request.data['tarefa'])
+        except Tarefas.DoesNotExist:
+            return Response({"detail": "Tarefa não encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not tarefa:
+            return Response({"detail": "Tarefa não encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Associando a tarefa ao comentário
+        # request.data['tarefa'] = tarefa.id  # Garantir que o comentário será associado à tarefa correta
+
+        serializer = ComentarioTarefaSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ComentarioTarefaIdView(APIView):
+    def delete(self, request, pk=None):
+        """
+        Exclui um comentário específico.
+        """
+        try:
+            comentario = ComentarioTarefa.objects.get(pk=pk, autor=request.user)  # Verifique se o usuário é o autor do comentário
+        except ComentarioTarefa.DoesNotExist:
+            return Response({"detail": "Comentário não encontrado ou você não tem permissão para excluí-lo."},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        comentario.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

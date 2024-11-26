@@ -41,13 +41,25 @@ class Tarefas(models.Model):
     ]
     prioridade = models.CharField(max_length=10, choices=PRIORIDADE_CHOICES, default='media')
 
-class Comentario(models.Model):
+class ComentarioProjeto(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    autor = models.ForeignKey(User, on_delete=models.CASCADE)  # O autor do comentário
+    texto = models.TextField()  # O conteúdo do comentário
+    data_criacao = models.DateTimeField(default=timezone.now)  # Data e hora de criação do comentário
+    projeto = models.ForeignKey('Projetos', on_delete=models.CASCADE, null=True, blank=True, related_name='comentarios')  # Relacionamento com o Projeto
+
+    def __str__(self):
+        return f"Comentário de {self.autor} em {self.data_criacao}"
+
+    class Meta:
+        ordering = ['data_criacao']  # Ordena os comentários pela data de criação
+
+class ComentarioTarefa(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     autor = models.ForeignKey(User, on_delete=models.CASCADE)  # O autor do comentário
     texto = models.TextField()  # O conteúdo do comentário
     data_criacao = models.DateTimeField(default=timezone.now)  # Data e hora de criação do comentário
     tarefa = models.ForeignKey('Tarefas', on_delete=models.CASCADE, null=True, blank=True, related_name='comentarios')  # Relacionamento com a Tarefa
-    projeto = models.ForeignKey('Projetos', on_delete=models.CASCADE, null=True, blank=True, related_name='comentarios')  # Relacionamento com o Projeto
 
     def __str__(self):
         return f"Comentário de {self.autor} em {self.data_criacao}"
