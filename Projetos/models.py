@@ -66,3 +66,22 @@ class ComentarioTarefa(models.Model):
 
     class Meta:
         ordering = ['data_criacao']  # Ordena os comentários pela data de criação
+
+
+class Convites(models.Model):
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('aceito', 'Aceito'),
+        ('recusado', 'Recusado'),
+    ]
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pendente')
+
+    # Campos do modelo
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    enviado_por = models.ForeignKey(User, related_name='convites_enviados', on_delete=models.CASCADE)
+    recebido_por = models.ForeignKey(User, related_name='convites_recebidos', on_delete=models.CASCADE)
+    projeto = models.ForeignKey(Projetos, on_delete=models.CASCADE)
+    data_envio = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Convite de {self.enviado_por} para {self.recebido_por} no projeto {self.projeto.nome} - Status: {self.status}"
