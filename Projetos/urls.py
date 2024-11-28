@@ -18,7 +18,7 @@ urlpatterns = [
     path('comentarioTarefa/<uuid:pk>', ComentarioTarefaIdView.as_view(), name='comentarios-detail'),
     #convites
     path('convites/', ConviteView.as_view(), name= 'convites'),
-    path('convites/<uuid:pk>/', ConviteIdView.as_view(), name='convites-detail')
+    path('convites/update/<uuid:pk>/', ConviteIdView.as_view(), name='convites-detail')
     ]
 
 

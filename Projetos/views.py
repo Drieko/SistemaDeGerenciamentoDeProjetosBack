@@ -345,17 +345,42 @@ class ConviteIdView(APIView):
         400: 'Status inválido.',
         404: 'Nenhum projeto encontrado com o status especificado.'
     })
-    def get(self, request, pk=None):
+    def put(self, request, pk=None):
         """
-        Retorna os projetos com base no status.
+        Atualiza o status de um convite baseado no ID.
         """
-        status = request.query_params.get('status')
+        # Buscar o convite pelo ID (pk)
+        try:
+            convite = Convites.objects.get(pk=pk)
+        except Convites.DoesNotExist:
+            return Response({"detail": "Convite não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        if status:
-            projetos = Projetos.objects.filter(status=status)
+        # Obter o novo status da query string
+        novo_status = request.query_params.get('status')
+
+        if novo_status and novo_status in dict(self.STATUS_CHOICES):
+            convite.status = novo_status
+            convite.save()  # Salva a alteração no banco de dados
+            serializer = ConviteSerializer(convite)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            projetos = Projetos.objects.all()
+            return Response({"detail": "Status inválido."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    @swagger_auto_schema(
+        operation_summary='Deleta um convite pelo ID.',
+        responses={
+            204: 'Convite deletado com sucesso.',
+            404: 'Convite não encontrado.'
+        }
+    )
+    def delete(self, request, pk=None):
+        """
+        Deleta um convite baseado no ID.
+        """
+        try:
+            convite = Convites.objects.get(pk=pk)
+        except Convites.DoesNotExist:
+            return Response({"detail": "Convite não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = ConviteSerializer(projetos, many=True)
-        return Response(serializer.data)
-    
+        convite.delete()  # Deleta o convite
+        return Response({"detail": "Convite deletado com sucesso."}, status=status.HTTP_204_NO_CONTENT)
