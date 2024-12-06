@@ -168,7 +168,6 @@ class TarefaIdView(APIView):
 
 class ComentarioProjetoView(APIView):
     @swagger_auto_schema(
-        permission_classes = [IsAuthenticated]
         operation_summary='Retorna os comentários de um projeto.',
         responses={
             200: ComentarioProjetoSerializer(many=True),
