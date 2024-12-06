@@ -167,6 +167,7 @@ class TarefaIdView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class ComentarioProjetoView(APIView):
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_summary='Retorna os comentários de um projeto.',
         responses={
