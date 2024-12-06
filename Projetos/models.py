@@ -41,6 +41,15 @@ class Tarefas(models.Model):
     ]
     prioridade = models.CharField(max_length=10, choices=PRIORIDADE_CHOICES, default='media')
 
+    CONCLUIDA_CHOICES = [
+        (True, 'Sim'),
+        (False, 'Não')
+    ]
+    concluida = models.BooleanField(choices=CONCLUIDA_CHOICES, default=False)
+
+    def __str__(self):
+        return f"{self.titulo} - {self.description} - {self.prazo} - {self.created}"
+
 class ComentarioProjeto(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     autor = models.ForeignKey(User, on_delete=models.CASCADE)  # O autor do comentário
