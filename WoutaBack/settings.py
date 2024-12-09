@@ -37,7 +37,7 @@ ALLOWED_HOSTS = ['*']
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "https://sistemadegerenciamentodeprojetosfront.onrender.com",
+    "https://woutafront.onrender.com",
     "http://127.0.0.1:8000",
     
 
